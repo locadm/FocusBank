@@ -120,6 +120,15 @@
       line-height: 1;
     }
 
+    .overdraft .bank-time {
+      color: var(--danger);
+    }
+
+    .overdraft .bank-panel {
+      border-color: rgba(248, 113, 113, 0.26);
+      background: rgba(248, 113, 113, 0.055);
+    }
+
     .bank-help {
       margin: 12px 0 0;
       color: var(--muted);
@@ -294,7 +303,7 @@
 </head>
 <body>
   <main class="app" id="app">
-    <p class="eyebrow">Earn time. Spend time.</p>
+    <p class="eyebrow">Earn time. Spend time. Borrow time.</p>
     <h1>Focus Bank</h1>
 
     <div class="status" aria-live="polite">
@@ -389,7 +398,7 @@
           return {
             mode: saved.mode === "break" ? "break" : "work",
             running: Boolean(saved.running),
-            bankMs: Math.max(0, Number(saved.bankMs) || 0),
+            bankMs: Number.isFinite(Number(saved.bankMs)) ? Number(saved.bankMs) : 0,
             sessionMs: Math.max(0, Number(saved.sessionMs) || 0),
             rateStep: Math.max(-19, Math.min(19, Number(saved.rateStep) || 0)),
             lastUpdatedAt: Number(saved.lastUpdatedAt) || Date.now()
@@ -436,15 +445,11 @@
           return;
         }
 
-        const spent = Math.min(elapsed, state.bankMs);
-        state.bankMs -= spent;
-        state.sessionMs += spent;
-
-        if (elapsed > spent || state.bankMs <= 0) {
-          state.bankMs = 0;
-          state.running = false;
-          warning.textContent = "Break bank empty. Work to earn more time.";
-        }
+        state.bankMs -= elapsed;
+        state.sessionMs += elapsed;
+        warning.textContent = state.bankMs < 0
+          ? "Overdraft active. Work time will repay this debt."
+          : "";
       }
 
       function switchMode() {
@@ -455,23 +460,12 @@
         state.lastUpdatedAt = Date.now();
         warning.textContent = "";
 
-        if (state.mode === "break" && state.bankMs <= 0) {
-          state.running = false;
-          warning.textContent = "No break time available.";
-        }
-
         saveState();
         render();
       }
 
       function togglePause() {
         applyElapsedTime();
-
-        if (!state.running && state.mode === "break" && state.bankMs <= 0) {
-          warning.textContent = "No break time available.";
-          render();
-          return;
-        }
 
         state.running = !state.running;
         state.lastUpdatedAt = Date.now();
@@ -499,21 +493,23 @@
         render();
       }
 
-      function formatTime(ms) {
-        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      function formatTime(ms, allowNegative = false) {
+        const isNegative = allowNegative && ms < 0;
+        const totalSeconds = Math.floor(Math.abs(ms) / 1000);
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
+        const sign = isNegative ? "−" : "";
 
         if (hours > 0) {
-          return [
+          return sign + [
             String(hours).padStart(2, "0"),
             String(minutes).padStart(2, "0"),
             String(seconds).padStart(2, "0")
           ].join(":");
         }
 
-        return [
+        return sign + [
           String(minutes).padStart(2, "0"),
           String(seconds).padStart(2, "0")
         ].join(":");
@@ -522,8 +518,9 @@
       function render() {
         app.classList.toggle("mode-break", state.mode === "break");
         app.classList.toggle("paused", !state.running);
+        app.classList.toggle("overdraft", state.bankMs < 0);
 
-        bankTime.textContent = formatTime(state.bankMs);
+        bankTime.textContent = formatTime(state.bankMs, true);
         sessionTime.textContent = formatTime(state.sessionMs);
 
         const modeName = state.mode === "work" ? "work" : "break";
@@ -531,9 +528,19 @@
           ? `${modeName[0].toUpperCase() + modeName.slice(1)} mode running`
           : `Paused in ${modeName} mode`;
 
-        bankHelp.textContent = state.mode === "work"
-          ? "Work adds time to the bank."
-          : "Break spends time from the bank.";
+        if (state.bankMs < 0) {
+          bankHelp.textContent = state.mode === "work"
+            ? "Work is repaying your break overdraft."
+            : "Break is increasing your overdraft.";
+        } else {
+          bankHelp.textContent = state.mode === "work"
+            ? "Work adds time to the bank."
+            : "Break spends time from the bank.";
+        }
+
+        warning.textContent = state.bankMs < 0
+          ? "Overdraft active. Work time will repay this debt."
+          : "";
 
         const rate = getRate();
         const workUnit = rate.work === 1 ? "minute" : "minutes";
