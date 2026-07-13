@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111827" />
+  <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/7787/7787153.png">
+  <title>Focus Bank</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --card: rgba(17, 24, 39, 0.88);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --work: #22c55e;
+      --break: #38bdf8;
+      --danger: #f87171;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 34rem),
+        radial-gradient(circle at bottom left, rgba(34, 197, 94, 0.10), transparent 30rem),
+        var(--bg);
+      color: var(--text);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app {
+      width: min(100%, 430px);
+      padding: 28px;
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      background: var(--card);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 7vw, 3rem);
+      line-height: 1;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--work);
+      box-shadow: 0 0 18px currentColor;
+    }
+
+    .mode-break .status-dot {
+      background: var(--break);
+    }
+
+    .paused .status-dot {
+      background: var(--muted);
+      box-shadow: none;
+    }
+
+    .bank-panel {
+      margin: 30px 0 24px;
+      padding: 28px 20px;
+      border-radius: 22px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .bank-label,
+    .session-label {
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .bank-time {
+      margin-top: 8px;
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(3.25rem, 15vw, 5.25rem);
+      font-weight: 750;
+      letter-spacing: -0.06em;
+      line-height: 1;
+    }
+
+    .bank-help {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .mode-switch {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      padding: 5px;
+      border: 0;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.06);
+      cursor: pointer;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .mode-switch::before {
+      content: "";
+      position: absolute;
+      inset: 5px 50% 5px 5px;
+      border-radius: 14px;
+      background: var(--work);
+      transition: transform 180ms ease, background 180ms ease;
+      z-index: 0;
+    }
+
+    .mode-break .mode-switch::before {
+      transform: translateX(100%);
+      background: var(--break);
+    }
+
+    .mode-option {
+      position: relative;
+      z-index: 1;
+      padding: 15px 12px;
+      text-align: center;
+      font-weight: 750;
+      user-select: none;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .pause-button,
+    .reset-button {
+      border: 0;
+      border-radius: 17px;
+      min-height: 56px;
+      cursor: pointer;
+      transition: transform 120ms ease, opacity 120ms ease;
+    }
+
+    .pause-button:active,
+    .reset-button:active,
+    .mode-switch:active {
+      transform: scale(0.985);
+    }
+
+    .pause-button {
+      padding: 0 22px;
+      color: #08111f;
+      background: #f8fafc;
+      font-weight: 800;
+    }
+
+    .reset-button {
+      width: 56px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 1.2rem;
+    }
+
+    .session {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .session-time {
+      margin-top: 5px;
+      color: var(--text);
+      font-size: 1.45rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rate-panel {
+      margin-top: 24px;
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .rate-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .rate-value {
+      font-size: 1.15rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rate-slider {
+      width: 100%;
+      accent-color: var(--work);
+      cursor: pointer;
+    }
+
+    .mode-break .rate-slider {
+      accent-color: var(--break);
+    }
+
+    .rate-scale {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rate-description {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+
+    .warning {
+      min-height: 22px;
+      margin: 14px 0 0;
+      color: var(--danger);
+      text-align: center;
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 430px) {
+      body {
+        padding: 14px;
+      }
+
+      .app {
+        padding: 22px;
+        border-radius: 24px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before {
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <p class="eyebrow">Earn time. Spend time.</p>
+    <h1>Focus Bank</h1>
+
+    <div class="status" aria-live="polite">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="statusText">Paused in work mode</span>
+    </div>
+
+    <section class="bank-panel" aria-labelledby="bankTitle">
+      <div class="bank-label" id="bankTitle">Available break time</div>
+      <div class="bank-time" id="bankTime">00:00</div>
+      <p class="bank-help" id="bankHelp">Work adds time to the bank.</p>
+    </section>
+
+    <button class="mode-switch" id="modeSwitch" type="button" aria-label="Switch between work and break mode">
+      <span class="mode-option">Work</span>
+      <span class="mode-option">Break</span>
+    </button>
+
+    <div class="controls">
+      <button class="pause-button" id="pauseButton" type="button">Start</button>
+      <button class="reset-button" id="resetButton" type="button" aria-label="Reset timer" title="Reset">↺</button>
+    </div>
+
+    <section class="rate-panel" aria-labelledby="rateTitle">
+      <div class="rate-header">
+        <div class="session-label" id="rateTitle">Work : break rate</div>
+        <div class="rate-value" id="rateValue">1:1</div>
+      </div>
+      <input
+        class="rate-slider"
+        id="rateSlider"
+        type="range"
+        min="-19"
+        max="19"
+        step="1"
+        value="0"
+        aria-describedby="rateDescription"
+      />
+      <div class="rate-scale" aria-hidden="true">
+        <span>1:20</span>
+        <span>1:1</span>
+        <span>20:1</span>
+      </div>
+      <p class="rate-description" id="rateDescription">1 minute worked earns 1 minute of break.</p>
+    </section>
+
+    <div class="session">
+      <div>
+        <div class="session-label">Current session</div>
+        <div class="session-time" id="sessionTime">00:00</div>
+      </div>
+    </div>
+
+    <p class="warning" id="warning" aria-live="assertive"></p>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "focus-bank-state-v1";
+
+      const app = document.getElementById("app");
+      const bankTime = document.getElementById("bankTime");
+      const sessionTime = document.getElementById("sessionTime");
+      const statusText = document.getElementById("statusText");
+      const bankHelp = document.getElementById("bankHelp");
+      const warning = document.getElementById("warning");
+      const modeSwitch = document.getElementById("modeSwitch");
+      const pauseButton = document.getElementById("pauseButton");
+      const resetButton = document.getElementById("resetButton");
+      const rateSlider = document.getElementById("rateSlider");
+      const rateValue = document.getElementById("rateValue");
+      const rateDescription = document.getElementById("rateDescription");
+
+      const defaultState = {
+        mode: "work",
+        running: false,
+        bankMs: 0,
+        sessionMs: 0,
+        rateStep: 0,
+        lastUpdatedAt: Date.now()
+      };
+
+      let state = loadState();
+
+      function loadState() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (!saved) return { ...defaultState };
+
+          return {
+            mode: saved.mode === "break" ? "break" : "work",
+            running: Boolean(saved.running),
+            bankMs: Math.max(0, Number(saved.bankMs) || 0),
+            sessionMs: Math.max(0, Number(saved.sessionMs) || 0),
+            rateStep: Math.max(-19, Math.min(19, Number(saved.rateStep) || 0)),
+            lastUpdatedAt: Number(saved.lastUpdatedAt) || Date.now()
+          };
+        } catch {
+          return { ...defaultState };
+        }
+      }
+
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function getRate() {
+        if (state.rateStep < 0) {
+          return { work: 1, break: 1 - state.rateStep };
+        }
+
+        if (state.rateStep > 0) {
+          return { work: state.rateStep + 1, break: 1 };
+        }
+
+        return { work: 1, break: 1 };
+      }
+
+      function getBreakMultiplier() {
+        const rate = getRate();
+        return rate.break / rate.work;
+      }
+
+      function applyElapsedTime(now = Date.now()) {
+        if (!state.running) {
+          state.lastUpdatedAt = now;
+          return;
+        }
+
+        const elapsed = Math.max(0, now - state.lastUpdatedAt);
+        state.lastUpdatedAt = now;
+
+        if (state.mode === "work") {
+          state.bankMs += elapsed * getBreakMultiplier();
+          state.sessionMs += elapsed;
+          warning.textContent = "";
+          return;
+        }
+
+        const spent = Math.min(elapsed, state.bankMs);
+        state.bankMs -= spent;
+        state.sessionMs += spent;
+
+        if (elapsed > spent || state.bankMs <= 0) {
+          state.bankMs = 0;
+          state.running = false;
+          warning.textContent = "Break bank empty. Work to earn more time.";
+        }
+      }
+
+      function switchMode() {
+        applyElapsedTime();
+
+        state.mode = state.mode === "work" ? "break" : "work";
+        state.sessionMs = 0;
+        state.lastUpdatedAt = Date.now();
+        warning.textContent = "";
+
+        if (state.mode === "break" && state.bankMs <= 0) {
+          state.running = false;
+          warning.textContent = "No break time available.";
+        }
+
+        saveState();
+        render();
+      }
+
+      function togglePause() {
+        applyElapsedTime();
+
+        if (!state.running && state.mode === "break" && state.bankMs <= 0) {
+          warning.textContent = "No break time available.";
+          render();
+          return;
+        }
+
+        state.running = !state.running;
+        state.lastUpdatedAt = Date.now();
+        warning.textContent = "";
+        saveState();
+        render();
+      }
+
+      function resetTimer() {
+        const confirmed = window.confirm("Reset the bank and current session?");
+        if (!confirmed) return;
+
+        const retainedRateStep = state.rateStep;
+        state = { ...defaultState, rateStep: retainedRateStep, lastUpdatedAt: Date.now() };
+        warning.textContent = "";
+        saveState();
+        render();
+      }
+
+      function setRateStep(nextStep) {
+        applyElapsedTime();
+        state.rateStep = Math.max(-19, Math.min(19, Number(nextStep) || 0));
+        state.lastUpdatedAt = Date.now();
+        saveState();
+        render();
+      }
+
+      function formatTime(ms) {
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+          return [
+            String(hours).padStart(2, "0"),
+            String(minutes).padStart(2, "0"),
+            String(seconds).padStart(2, "0")
+          ].join(":");
+        }
+
+        return [
+          String(minutes).padStart(2, "0"),
+          String(seconds).padStart(2, "0")
+        ].join(":");
+      }
+
+      function render() {
+        app.classList.toggle("mode-break", state.mode === "break");
+        app.classList.toggle("paused", !state.running);
+
+        bankTime.textContent = formatTime(state.bankMs);
+        sessionTime.textContent = formatTime(state.sessionMs);
+
+        const modeName = state.mode === "work" ? "work" : "break";
+        statusText.textContent = state.running
+          ? `${modeName[0].toUpperCase() + modeName.slice(1)} mode running`
+          : `Paused in ${modeName} mode`;
+
+        bankHelp.textContent = state.mode === "work"
+          ? "Work adds time to the bank."
+          : "Break spends time from the bank.";
+
+        const rate = getRate();
+        const workUnit = rate.work === 1 ? "minute" : "minutes";
+        const breakUnit = rate.break === 1 ? "minute" : "minutes";
+
+        rateSlider.value = String(state.rateStep);
+        rateValue.textContent = `${rate.work}:${rate.break}`;
+        rateDescription.textContent = `${rate.work} ${workUnit} worked ${rate.work === 1 ? "earns" : "earn"} ${rate.break} ${breakUnit} of break.`;
+        rateSlider.setAttribute(
+          "aria-label",
+          `Work to break rate ${rate.work} to ${rate.break}`
+        );
+
+        pauseButton.textContent = state.running ? "Pause" : "Start";
+        modeSwitch.setAttribute(
+          "aria-label",
+          `Currently in ${modeName} mode. Switch to ${state.mode === "work" ? "break" : "work"} mode.`
+        );
+      }
+
+      modeSwitch.addEventListener("click", switchMode);
+      pauseButton.addEventListener("click", togglePause);
+      resetButton.addEventListener("click", resetTimer);
+      rateSlider.addEventListener("input", (event) => setRateStep(event.target.value));
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          applyElapsedTime();
+          saveState();
+          render();
+        } else {
+          applyElapsedTime();
+          saveState();
+        }
+      });
+
+      window.addEventListener("beforeunload", () => {
+        applyElapsedTime();
+        saveState();
+      });
+
+      setInterval(() => {
+        applyElapsedTime();
+        saveState();
+        render();
+      }, 250);
+
+      applyElapsedTime();
+      render();
+    })();
+  </script>
+</body>
+</html>
