@@ -102,6 +102,13 @@
       border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
+    .bank-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
     .bank-label,
     .session-label {
       color: var(--muted);
@@ -111,6 +118,33 @@
       text-transform: uppercase;
     }
 
+    .visibility-toggle {
+      display: inline-grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 120ms ease, background 120ms ease, transform 120ms ease;
+    }
+
+    .visibility-toggle:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .visibility-toggle:active {
+      transform: scale(0.94);
+    }
+
+    .visibility-toggle svg {
+      width: 18px;
+      height: 18px;
+    }
+
     .bank-time {
       margin-top: 8px;
       font-variant-numeric: tabular-nums;
@@ -118,6 +152,10 @@
       font-weight: 750;
       letter-spacing: -0.06em;
       line-height: 1;
+    }
+
+    .bank-time.hidden {
+      letter-spacing: 0.08em;
     }
 
     .overdraft .bank-time {
@@ -312,7 +350,15 @@
     </div>
 
     <section class="bank-panel" aria-labelledby="bankTitle">
-      <div class="bank-label" id="bankTitle">Available break time</div>
+      <div class="bank-header">
+        <div class="bank-label" id="bankTitle">Available break time</div>
+        <button class="visibility-toggle" id="visibilityToggle" type="button" aria-label="Hide available break time" title="Hide available break time">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+      </div>
       <div class="bank-time" id="bankTime">00:00</div>
       <p class="bank-help" id="bankHelp">Work adds time to the bank.</p>
     </section>
@@ -378,6 +424,18 @@
       const rateSlider = document.getElementById("rateSlider");
       const rateValue = document.getElementById("rateValue");
       const rateDescription = document.getElementById("rateDescription");
+      const visibilityToggle = document.getElementById("visibilityToggle");
+
+      const visibleEyeIcon = `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>`;
+      const hiddenEyeIcon = `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M3 3l18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M9.9 5.25A10.5 10.5 0 0 1 12 5c6 0 9.5 7 9.5 7a16.1 16.1 0 0 1-3.1 3.95M6.6 6.95A16 16 0 0 0 2.5 12s3.5 7 9.5 7c1.6 0 3.02-.5 4.24-1.22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
 
       const defaultState = {
         mode: "work",
@@ -385,6 +443,7 @@
         bankMs: 0,
         sessionMs: 0,
         rateStep: 0,
+        breakTimeVisible: true,
         lastUpdatedAt: Date.now()
       };
 
@@ -401,6 +460,7 @@
             bankMs: Number.isFinite(Number(saved.bankMs)) ? Number(saved.bankMs) : 0,
             sessionMs: Math.max(0, Number(saved.sessionMs) || 0),
             rateStep: Math.max(-19, Math.min(19, Number(saved.rateStep) || 0)),
+            breakTimeVisible: saved.breakTimeVisible !== false,
             lastUpdatedAt: Number(saved.lastUpdatedAt) || Date.now()
           };
         } catch {
@@ -474,6 +534,12 @@
         render();
       }
 
+      function toggleBreakTimeVisibility() {
+        state.breakTimeVisible = !state.breakTimeVisible;
+        saveState();
+        render();
+      }
+
       function resetTimer() {
         const confirmed = window.confirm("Reset the bank and current session?");
         if (!confirmed) return;
@@ -520,7 +586,12 @@
         app.classList.toggle("paused", !state.running);
         app.classList.toggle("overdraft", state.bankMs < 0);
 
-        bankTime.textContent = formatTime(state.bankMs, true);
+        bankTime.textContent = state.breakTimeVisible ? formatTime(state.bankMs, true) : "••:••";
+        bankTime.classList.toggle("hidden", !state.breakTimeVisible);
+        bankTime.setAttribute("aria-label", state.breakTimeVisible ? "Available break time" : "Available break time hidden");
+        visibilityToggle.innerHTML = state.breakTimeVisible ? visibleEyeIcon : hiddenEyeIcon;
+        visibilityToggle.setAttribute("aria-label", `${state.breakTimeVisible ? "Hide" : "Show"} available break time`);
+        visibilityToggle.setAttribute("title", `${state.breakTimeVisible ? "Hide" : "Show"} available break time`);
         sessionTime.textContent = formatTime(state.sessionMs);
 
         const modeName = state.mode === "work" ? "work" : "break";
@@ -564,6 +635,7 @@
       modeSwitch.addEventListener("click", switchMode);
       pauseButton.addEventListener("click", togglePause);
       resetButton.addEventListener("click", resetTimer);
+      visibilityToggle.addEventListener("click", toggleBreakTimeVisibility);
       rateSlider.addEventListener("input", (event) => setRateStep(event.target.value));
 
       document.addEventListener("visibilitychange", () => {
